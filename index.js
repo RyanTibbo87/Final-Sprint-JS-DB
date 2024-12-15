@@ -164,12 +164,11 @@ app.get("/profile", async (request, response) => {
   response.render("profile", { username: user.username, pollsVoted });
 });
 
-app.get("/createPoll", async (request, response) => {
-  if (!request.session.user?.id) {
-    return response.redirect("/");
+app.get("/createPoll", async (req, res) => {
+  if (!req.session.user?.id) {
+    return res.redirect("/login"); // Redirect to login if user isn't logged in
   }
-
-  return response.render("createPoll");
+  res.render("createPoll"); // Render createPoll.ejs
 });
 
 // Poll creation
@@ -199,6 +198,46 @@ app.post("/createPoll", async (req, res) => {
   } catch (error) {
     console.error("Poll creation error:", error);
     res.status(500).send("An error occurred while creating the poll.");
+  }
+});
+app.post("/vote", async (req, res) => {
+  const { pollId, pollOption } = req.body;
+
+  try {
+    // Find the poll by ID
+    const poll = await mongoose.model("poll").findById(pollId);
+
+    if (!poll) {
+      return res.status(404).send("Poll not found");
+    }
+
+    // Find the selected option and increment the vote count
+    const option = poll.options.find((opt) => opt.answer === pollOption);
+
+    if (!option) {
+      return res.status(400).send("Invalid poll option");
+    }
+
+    option.votes += 1; // Increment the vote count
+    await poll.save(); // Save the updated poll
+
+    // Send a WebSocket message to all clients with the updated poll
+    connectedClients.forEach((client) => {
+      client.send(
+        JSON.stringify({
+          type: "vote_update",
+          poll: {
+            _id: poll._id,
+            options: poll.options,
+          },
+        })
+      );
+    });
+
+    res.redirect("/dashboard"); // Redirect back to the dashboard
+  } catch (error) {
+    console.error("Error processing vote:", error.message);
+    res.status(500).send("An error occurred while processing the vote.");
   }
 });
 
