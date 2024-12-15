@@ -4,8 +4,6 @@ const path = require("path");
 const mongoose = require("mongoose");
 const session = require("express-session");
 const bcrypt = require("bcrypt");
-const User = require("./models/user"); // Import User model
-const Poll = require("./models/poll"); // Import Poll model
 
 const PORT = 3000;
 //TODO: Update this URI to match your own MongoDB setup
@@ -34,9 +32,31 @@ app.ws("/ws", (socket, request) => {
 
   socket.on("message", async (message) => {
     const data = JSON.parse(message);
+
+    if (data.type === "vote") {
+      const { pollId, selectedOption } = data;
+      const poll = await mongoose.model("poll").findById(pollId);
+
+      if (poll) {
+        const option = poll.options.find(
+          (opt) => opt.answer === selectedOption
+        );
+        if (option) {
+          option.votes += 1;
+          await poll.save();
+
+          // Notify all clients about the vote update
+          connectedClients.forEach((client) => {
+            client.send(JSON.stringify({ type: "vote_update", poll }));
+          });
+        }
+      }
+    }
   });
 
-  socket.on("close", async (message) => {});
+  socket.on("close", () => {
+    connectedClients = connectedClients.filter((client) => client !== socket);
+  });
 });
 
 app.get("/", async (request, response) => {
@@ -54,23 +74,23 @@ app.get("/login", async (request, response) => {
   response.render("signup", { errorMessage: null });
 });
 
-app.post("/login", async (request, response) => {
-  const { username, password } = request.body;
+app.post("/login", async (req, res) => {
+  const { username, password } = req.body;
 
   try {
-    const user = await mongoose.model("User").findOne({ username });
+    const user = await mongoose.model("user").findOne({ username });
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      return response.render("signup", {
+      return res.render("signup", {
         errorMessage: "Invalid username or password",
       });
     }
 
-    request.session.user = { id: user._id, username: user.username };
-    return response.redirect("/dashboard");
+    req.session.user = { id: user._id, username: user.username };
+    return res.redirect("/dashboard");
   } catch (error) {
     console.error("Error logging in:", error);
-    response.status(500).send("An error occurred while logging in.");
+    res.status(500).send("An error occurred while logging in.");
   }
 });
 
@@ -82,13 +102,18 @@ app.get("/signup", async (request, response) => {
   return response.render("signup", { errorMessage: null });
 });
 
-app.get("/dashboard", async (request, response) => {
-  if (!request.session.user?.id) {
-    return response.redirect("/");
+app.get("/dashboard", async (req, res) => {
+  if (!req.session.user?.id) {
+    return res.redirect("/");
   }
 
-  const polls = await mongoose.model("Poll").find(); // Fetch all polls
-  response.render("index/authenticatedIndex", { polls });
+  try {
+    const polls = await mongoose.model("poll").find(); // Fetch polls
+    res.render("index/authenticatedIndex", { polls });
+  } catch (error) {
+    console.error("Error loading dashboard:", error);
+    res.status(500).send("An error occurred while loading the dashboard.");
+  }
 });
 
 app.get("/profile", async (request, response) => {
@@ -113,15 +138,33 @@ app.get("/createPoll", async (request, response) => {
 });
 
 // Poll creation
-app.post("/createPoll", async (request, response) => {
-  const { question, options } = request.body;
-  const formattedOptions = Object.values(options).map((option) => ({
+app.post("/createPoll", async (req, res) => {
+  const { question, options } = req.body;
+
+  const formattedOptions = options.map((option) => ({
     answer: option,
     votes: 0,
   }));
 
-  const pollCreationError = onCreateNewPoll(question, formattedOptions);
-  //TODO: If an error occurs, what should we do?
+  try {
+    const newPoll = new mongoose.model("poll")({
+      question,
+      options: formattedOptions,
+      createdBy: req.session.user.id, // Associate poll with user
+    });
+
+    await newPoll.save();
+
+    // Notify WebSocket clients
+    connectedClients.forEach((client) => {
+      client.send(JSON.stringify({ type: "new_poll", poll: newPoll }));
+    });
+
+    res.redirect("/dashboard");
+  } catch (error) {
+    console.error("Poll creation error:", error);
+    res.status(500).send("An error occurred while creating the poll.");
+  }
 });
 
 mongoose

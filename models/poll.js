@@ -16,5 +16,4 @@ const pollSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-const poll = mongoose.model("poll", pollSchema); // lowercase 'poll'
-module.exports = poll;
+mongoose.model("poll", pollSchema); // Register the model
