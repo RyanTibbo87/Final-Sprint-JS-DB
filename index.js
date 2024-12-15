@@ -4,6 +4,8 @@ const path = require("path");
 const mongoose = require("mongoose");
 const session = require("express-session");
 const bcrypt = require("bcrypt");
+const User = require("./models/user"); // Import User model
+const Poll = require("./models/poll"); // Import Poll model
 
 const PORT = 3000;
 //TODO: Update this URI to match your own MongoDB setup
