@@ -90,7 +90,18 @@ app.get("/dashboard", async (request, response) => {
   return response.render("index/authenticatedIndex", { polls: [] });
 });
 
-app.get("/profile", async (request, response) => {});
+app.get("/profile", async (request, response) => {
+  if (!request.session.user?.id) {
+    return response.redirect("/");
+  }
+
+  const user = await mongoose.model("User").findById(request.session.user.id);
+  const pollsVoted = await mongoose
+    .model("Poll")
+    .find({ "options.voters": user._id });
+
+  response.render("profile", { username: user.username, pollsVoted });
+});
 
 app.get("/createPoll", async (request, response) => {
   if (!request.session.user?.id) {
