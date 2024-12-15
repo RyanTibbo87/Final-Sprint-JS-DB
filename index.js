@@ -4,6 +4,8 @@ const path = require("path");
 const mongoose = require("mongoose");
 const session = require("express-session");
 const bcrypt = require("bcrypt");
+require("./models/user");
+require("./models/poll");
 
 const PORT = 3000;
 //TODO: Update this URI to match your own MongoDB setup
@@ -67,30 +69,36 @@ app.get("/", async (request, response) => {
   response.render("index/unauthenticatedIndex", {});
 });
 
-app.get("/login", async (request, response) => {
-  if (request.session.user?.id) {
-    return response.redirect("/dashboard");
+app.get("/login", (req, res) => {
+  if (req.session.user?.id) {
+    return res.redirect("/dashboard");
   }
-  response.render("signup", { errorMessage: null });
+
+  res.render("login", { errorMessage: null });
 });
 
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
   try {
+    // Check if the user exists
     const user = await mongoose.model("user").findOne({ username });
 
+    // If user doesn't exist or password is incorrect
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.render("signup", {
+      return res.render("login", {
         errorMessage: "Invalid username or password",
       });
     }
 
+    // Save the user in the session
     req.session.user = { id: user._id, username: user.username };
-    return res.redirect("/dashboard");
+    res.redirect("/dashboard");
   } catch (error) {
-    console.error("Error logging in:", error);
-    res.status(500).send("An error occurred while logging in.");
+    console.error("Login error:", error.message, error.stack);
+    res
+      .status(500)
+      .render("login", { errorMessage: "An error occurred while logging in" });
   }
 });
 
@@ -100,6 +108,31 @@ app.get("/signup", async (request, response) => {
   }
 
   return response.render("signup", { errorMessage: null });
+});
+app.post("/signup", async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    // Check if the username already exists
+    const existingUser = await mongoose.model("user").findOne({ username });
+    if (existingUser) {
+      return res.render("signup", { errorMessage: "Username already exists" });
+    }
+
+    // Create a new user
+    const newUser = new mongoose.model("user")({ username, password });
+    await newUser.save();
+
+    // Store the user session and redirect
+    req.session.user = { id: newUser._id, username: newUser.username };
+    res.redirect("/dashboard");
+  } catch (error) {
+    // Log the error details
+    console.error("Signup error:", error.message, error.stack);
+    res
+      .status(500)
+      .render("signup", { errorMessage: "An error occurred while signing up" });
+  }
 });
 
 app.get("/dashboard", async (req, res) => {
@@ -111,7 +144,9 @@ app.get("/dashboard", async (req, res) => {
     const polls = await mongoose.model("poll").find(); // Fetch polls
     res.render("index/authenticatedIndex", { polls });
   } catch (error) {
-    console.error("Error loading dashboard:", error);
+    // Log the error for debugging
+    console.error("Dashboard error:", error.message, error.stack);
+
     res.status(500).send("An error occurred while loading the dashboard.");
   }
 });
