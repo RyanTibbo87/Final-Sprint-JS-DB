@@ -195,27 +195,35 @@ a:hover {
 }
 /* Header Navigation */
 .header {
-  background-color: #27293d;
-  padding: 10px 20px;
+  background-color: #1f1f3d; /* Dark blue background */
+  color: #ffc107; /* Yellow text color */
+  padding: 15px 20px;
   display: flex;
-  justify-content: center;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  justify-content: center; /* Center items horizontally */
+  align-items: center; /* Align items vertically */
+  position: fixed; /* Make header stay on top */
+  top: 0;
+  left: 0;
+  width: 100%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
 }
 
 .nav-container {
   display: flex;
-  gap: 20px;
+  gap: 30px; /* Spacing between links */
 }
 
 .nav-link {
-  color: #ffc107;
+  color: #ffc107; /* Yellow text */
   text-decoration: none;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: bold;
+  text-transform: uppercase;
   transition: color 0.3s, transform 0.2s;
 }
 
 .nav-link:hover {
-  color: #fff;
-  transform: translateY(-2px);
+  color: #ffffff; /* White on hover */
+  transform: scale(1.1); /* Slight zoom effect */
 }
