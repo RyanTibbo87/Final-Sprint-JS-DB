@@ -89,18 +89,24 @@ function onIncomingVote(data) {
  * @param {Event} event The form event sent after the user clicks a poll option to "submit" the form
  */
 function onVoteClicked(event) {
-  event.preventDefault();
+  event.preventDefault(); // Prevent default form submission
+
   const formData = new FormData(event.target);
+  const pollId = formData.get("poll-id"); // Get the poll ID
+  const selectedOption = event.submitter.value; // Get the clicked button value
 
-  const pollId = formData.get("poll-id");
-  const selectedOption = event.submitter.value;
-
-  // Send the vote data to the server via WebSocket
-  const voteData = {
-    type: "vote",
-    pollId: pollId,
-    pollOption: selectedOption,
-  };
-
-  socket.send(JSON.stringify(voteData));
+  // Send a POST request to the server
+  fetch("/vote", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pollId, selectedOption }),
+  })
+    .then((response) => {
+      if (response.ok) {
+        window.location.reload(); // Reload the page to reflect updates
+      } else {
+        alert("Error voting. Please try again.");
+      }
+    })
+    .catch((err) => console.error("Error:", err));
 }

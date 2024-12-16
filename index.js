@@ -27,6 +27,11 @@ app.use(
 );
 let connectedClients = [];
 
+app.use((req, res, next) => {
+  res.locals.session = req.session; // Make session data available in EJS views
+  next();
+});
+
 //Note: Not all routes you need are present here, some are missing and you'll need to add them yourself.
 
 app.ws("/ws", (socket, request) => {
@@ -110,10 +115,6 @@ app.get("/logout", (req, res) => {
     }
     res.redirect("/"); // Redirect to home after logout
   });
-});
-app.use((req, res, next) => {
-  res.locals.session = req.session; // Make session data available in EJS views
-  next();
 });
 
 app.get("/signup", async (request, response) => {
@@ -213,7 +214,7 @@ app.post("/createPoll", async (req, res) => {
   }
 });
 app.post("/vote", async (req, res) => {
-  const { pollId, pollOption } = req.body;
+  const { pollId, selectedOption } = req.body;
 
   try {
     // Find the poll by ID
@@ -223,32 +224,25 @@ app.post("/vote", async (req, res) => {
       return res.status(404).send("Poll not found");
     }
 
-    // Find the selected option and increment the vote count
-    const option = poll.options.find((opt) => opt.answer === pollOption);
-
-    if (!option) {
-      return res.status(400).send("Invalid poll option");
+    // Find the selected option and increment the votes
+    const option = poll.options.find((opt) => opt.answer === selectedOption);
+    if (option) {
+      option.votes += 1;
+    } else {
+      return res.status(400).send("Invalid option");
     }
 
-    option.votes += 1; // Increment the vote count
-    await poll.save(); // Save the updated poll
+    // Save the updated poll
+    await poll.save();
 
-    // Send a WebSocket message to all clients with the updated poll
+    // Broadcast the updated poll to all WebSocket clients
     connectedClients.forEach((client) => {
-      client.send(
-        JSON.stringify({
-          type: "vote_update",
-          poll: {
-            _id: poll._id,
-            options: poll.options,
-          },
-        })
-      );
+      client.send(JSON.stringify({ type: "vote_update", poll }));
     });
 
-    res.redirect("/dashboard"); // Redirect back to the dashboard
+    res.redirect("/dashboard");
   } catch (error) {
-    console.error("Error processing vote:", error.message);
+    console.error("Error processing vote:", error);
     res.status(500).send("An error occurred while processing the vote.");
   }
 });
