@@ -1,8 +1,14 @@
 <nav class="header">
   <div class="nav-container">
     <a href="/" class="nav-link">Home</a>
+    <% if (session.user) { %>
+    <a href="/logout" class="nav-link">Logout</a>
+    <% } else { %>
     <a href="/login" class="nav-link">Login</a>
+    <% } %>
     <a href="/signup" class="nav-link">Signup</a>
+    <% if (session.user) { %>
     <a href="/createPoll" class="nav-link">Create Poll</a>
+    <% } %>
   </div>
 </nav>

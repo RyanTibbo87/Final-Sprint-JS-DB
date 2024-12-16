@@ -101,6 +101,20 @@ app.post("/login", async (req, res) => {
       .render("login", { errorMessage: "An error occurred while logging in" });
   }
 });
+// Logout route
+app.get("/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error("Error logging out:", err);
+      return res.status(500).send("An error occurred while logging out.");
+    }
+    res.redirect("/"); // Redirect to home after logout
+  });
+});
+app.use((req, res, next) => {
+  res.locals.session = req.session; // Make session data available in EJS views
+  next();
+});
 
 app.get("/signup", async (request, response) => {
   if (request.session.user?.id) {
@@ -137,16 +151,14 @@ app.post("/signup", async (req, res) => {
 
 app.get("/dashboard", async (req, res) => {
   if (!req.session.user?.id) {
-    return res.redirect("/");
+    return res.redirect("/login");
   }
 
   try {
-    const polls = await mongoose.model("poll").find(); // Fetch polls
+    const polls = await mongoose.model("poll").find(); // Fetch all polls
     res.render("index/authenticatedIndex", { polls });
   } catch (error) {
-    // Log the error for debugging
-    console.error("Dashboard error:", error.message, error.stack);
-
+    console.error("Error loading dashboard:", error);
     res.status(500).send("An error occurred while loading the dashboard.");
   }
 });
