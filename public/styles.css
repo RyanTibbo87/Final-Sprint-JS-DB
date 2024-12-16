@@ -193,3 +193,29 @@ a {
 a:hover {
   text-decoration: underline;
 }
+/* Header Navigation */
+.header {
+  background-color: #27293d;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.nav-container {
+  display: flex;
+  gap: 20px;
+}
+
+.nav-link {
+  color: #ffc107;
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: bold;
+  transition: color 0.3s, transform 0.2s;
+}
+
+.nav-link:hover {
+  color: #fff;
+  transform: translateY(-2px);
+}

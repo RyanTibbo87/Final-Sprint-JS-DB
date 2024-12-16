@@ -3,69 +3,40 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dashboard - Active Polls</title>
+    <title>Dashboard</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <!-- Main Content Wrapper -->
+    <% include partials/header %>
+
     <div class="main-content">
       <h1>Active Polls</h1>
-
-      <!-- Display Polls -->
-      <% if (polls && polls.length > 0) { %>
       <ul id="polls">
         <% polls.forEach((poll) => { %>
-        <li class="poll-container" id="<%= poll._id %>">
+        <li class="poll-container" id="<%= poll.id %>">
           <h2><%= poll.question %></h2>
-
-          <!-- Poll Options -->
           <ul class="poll-options">
-            <% poll.options.forEach(({ answer, votes }) => { %>
-            <li id="<%= poll._id %>_<%= answer %>">
-              <span><strong><%= answer %></strong></span>
-              <span><%= votes %> votes</span>
-            </li>
-            <% }) %>
+            <% for (let { answer, votes } of poll.options) { %>
+            <li><strong><%= answer %>:</strong> <%= votes %> votes</li>
+            <% } %>
           </ul>
-
-          <!-- Voting Form -->
-          <form class="poll-form" action="/vote" method="POST">
-            <input type="hidden" name="pollId" value="<%= poll._id %>" />
-            <div class="button-container">
-              <% poll.options.forEach(({ answer }) => { %>
-              <button
-                class="action-button vote-button"
-                type="submit"
-                name="pollOption"
-                value="<%= answer %>"
-              >
-                Vote for <%= answer %>
-              </button>
-              <% }) %>
-            </div>
+          <form class="poll-form button-container" method="POST" action="/vote">
+            <% for (let { answer } of poll.options) { %>
+            <button
+              class="action-button"
+              type="submit"
+              value="<%= answer %>"
+              name="poll-option"
+            >
+              Vote for <%= answer %>
+            </button>
+            <% } %>
+            <input type="hidden" value="<%= poll.id %>" name="poll-id" />
           </form>
         </li>
         <% }) %>
       </ul>
-      <div style="text-align: center; margin-bottom: 20px">
-        <a
-          href="/createPoll"
-          class="action-button"
-          style="max-width: 200px; margin: auto"
-        >
-          + Create a New Poll
-        </a>
-      </div>
-
-      <% } else { %>
-      <!-- No Polls Message -->
-      <p class="no-polls-message">
-        No active polls available. Create a new poll
-        <a href="/createPoll">here</a>.
-      </p>
-      <% } %>
     </div>
-
     <script src="/frontend.js" type="application/javascript"></script>
   </body>
 </html>
